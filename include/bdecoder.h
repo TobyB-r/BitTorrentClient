@@ -9,7 +9,7 @@
 #include <vector>
 
 /* BEncoding is the format used to encode information in the .torrent files
-   Text from https://wiki.theory.org/BitTorrentSpecification#Bencoding
+ * Text from https://wiki.theory.org/BitTorrentSpecification#Bencoding
 
  Byte Strings
 
@@ -63,15 +63,21 @@
 
      Example: de represents an empty dictionary {}
 */
+struct BObj;
+
+struct BDict {
+  // we store keys in order
+  // ordering of keys is important for the protocol
+  std::vector<std::string> keys;
+  std::unordered_map<std::string, BObj> map;
+};
 
 struct BObj {
-  std::variant<int64_t, std::string, std::vector<BObj>,
-               std::unordered_map<std::string, BObj>>
-      inner;
+  std::variant<int64_t, std::string, std::vector<BObj>, BDict> inner;
 
   static BObj fromInt(int64_t a);
   static BObj fromString(std::string a);
-  static BObj fromMap(std::unordered_map<std::string, BObj> a);
+  static BObj fromDict(BDict a);
   static BObj fromVec(std::vector<BObj> a);
 };
 
@@ -83,8 +89,7 @@ std::string decodeString(std::basic_istream<char> &stream);
 
 std::vector<BObj> decodeList(std::basic_istream<char> &stream);
 
-std::unordered_map<std::string, BObj>
-decodeDict(std::basic_istream<char> &stream);
+BDict decodeDict(std::basic_istream<char> &stream);
 
 class BEncodingException : public std::runtime_error {
   std::string msg;

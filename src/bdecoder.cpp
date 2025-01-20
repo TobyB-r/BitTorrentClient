@@ -9,7 +9,7 @@
 #include <vector>
 
 /* BEncoding is the format used to encode information in the .torrent files
-   Text from https://wiki.theory.org/BitTorrentSpecification#Bencoding
+ * Text from https://wiki.theory.org/BitTorrentSpecification#Bencoding
 
  Byte Strings
 
@@ -62,26 +62,26 @@
  "spam" => [ "a", "b" ] }
 
      Example: de represents an empty dictionary {}
-*/
+ */
 
 BObj BObj::fromInt(int64_t a) {
-  return BObj{.inner = std::variant<int64_t, std::string, std::vector<BObj>,
-                                    std::unordered_map<std::string, BObj>>(a)};
+  return BObj{
+      .inner = std::variant<int64_t, std::string, std::vector<BObj>, BDict>(a)};
 }
 
 BObj BObj::fromString(std::string a) {
-  return BObj{.inner = std::variant<int64_t, std::string, std::vector<BObj>,
-                                    std::unordered_map<std::string, BObj>>(a)};
+  return BObj{
+      .inner = std::variant<int64_t, std::string, std::vector<BObj>, BDict>(a)};
 }
 
-BObj BObj::fromMap(std::unordered_map<std::string, BObj> a) {
-  return BObj{.inner = std::variant<int64_t, std::string, std::vector<BObj>,
-                                    std::unordered_map<std::string, BObj>>(a)};
+BObj BObj::fromDict(BDict a) {
+  return BObj{
+      .inner = std::variant<int64_t, std::string, std::vector<BObj>, BDict>(a)};
 }
 
 BObj BObj::fromVec(std::vector<BObj> a) {
-  return BObj{.inner = std::variant<int64_t, std::string, std::vector<BObj>,
-                                    std::unordered_map<std::string, BObj>>(a)};
+  return BObj{
+      .inner = std::variant<int64_t, std::string, std::vector<BObj>, BDict>(a)};
 }
 
 BObj decodeObject(std::basic_istream<char> &stream) {
@@ -94,7 +94,7 @@ BObj decodeObject(std::basic_istream<char> &stream) {
     return BObj::fromInt(decodeInt(stream, 'e'));
   } else if (inp == 'd') {
     stream.get();
-    return BObj::fromMap(decodeDict(stream));
+    return BObj::fromDict(decodeDict(stream));
   } else if (inp == 'l') {
     stream.get();
     return BObj::fromVec(decodeList(stream));
@@ -108,18 +108,20 @@ BObj decodeObject(std::basic_istream<char> &stream) {
       "Error parsing BEncoding object at position {} char {}", pos, inp));
 };
 
-std::unordered_map<std::string, BObj>
-decodeDict(std::basic_istream<char> &stream) {
+BDict decodeDict(std::basic_istream<char> &stream) {
   std::unordered_map<std::string, BObj> map;
+  std::vector<std::string> keys;
 
   while (stream.peek() != 'e') {
     auto key = decodeString(stream);
     auto value = decodeObject(stream);
+    keys.push_back(key);
     map[key] = value;
   }
 
   stream.get(); // clear 'e' from stream
-  return map;
+
+  return BDict{.keys = keys, .map = map};
 }
 
 std::vector<BObj> decodeList(std::basic_istream<char> &stream) {
