@@ -81,15 +81,15 @@ struct BObj {
   static BObj fromVec(std::vector<BObj> a);
 };
 
-BObj decodeObject(std::basic_istream<char> &stream);
+BObj decodeObject(std::istream &stream);
 
-int64_t decodeInt(std::basic_istream<char> &stream, char end);
+int64_t decodeInt(std::istream &stream, char end);
 
-std::string decodeString(std::basic_istream<char> &stream);
+std::string decodeString(std::istream &stream);
 
-std::vector<BObj> decodeList(std::basic_istream<char> &stream);
+std::vector<BObj> decodeList(std::istream &stream);
 
-BDict decodeDict(std::basic_istream<char> &stream);
+BDict decodeDict(std::istream &stream);
 
 class BEncodingException : public std::runtime_error {
   std::string msg;

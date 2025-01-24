@@ -84,7 +84,7 @@ BObj BObj::fromVec(std::vector<BObj> a) {
       .inner = std::variant<int64_t, std::string, std::vector<BObj>, BDict>(a)};
 }
 
-BObj decodeObject(std::basic_istream<char> &stream) {
+BObj decodeObject(std::istream &stream) {
   char inp = stream.peek();
 
   BObj obj;
@@ -108,7 +108,7 @@ BObj decodeObject(std::basic_istream<char> &stream) {
       "Error parsing BEncoding object at position {} char {}", pos, inp));
 };
 
-BDict decodeDict(std::basic_istream<char> &stream) {
+BDict decodeDict(std::istream &stream) {
   std::unordered_map<std::string, BObj> map;
   std::vector<std::string> keys;
 
@@ -124,7 +124,7 @@ BDict decodeDict(std::basic_istream<char> &stream) {
   return BDict{.keys = keys, .map = map};
 }
 
-std::vector<BObj> decodeList(std::basic_istream<char> &stream) {
+std::vector<BObj> decodeList(std::istream &stream) {
   std::vector<BObj> list;
 
   while (stream.peek() != 'e') {
@@ -135,7 +135,7 @@ std::vector<BObj> decodeList(std::basic_istream<char> &stream) {
   return list;
 }
 
-int64_t decodeInt(std::basic_istream<char> &stream, char end) {
+int64_t decodeInt(std::istream &stream, char end) {
   char buf[26] = {'\0'};
   char *endptr = &buf[0];
   stream.getline(&buf[0], 25, end);
@@ -151,7 +151,7 @@ int64_t decodeInt(std::basic_istream<char> &stream, char end) {
   return i;
 };
 
-std::string decodeString(std::basic_istream<char> &stream) {
+std::string decodeString(std::istream &stream) {
   int length = decodeInt(stream, ':');
   std::string str(length, '\0');
   stream.read(&str[0], length);
