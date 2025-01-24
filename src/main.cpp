@@ -1,7 +1,7 @@
-#include "bdecoder.h"
+#include "metainfo.h"
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
-#include <sstream>
 #include <stdexcept>
 
 int main(int argc, char *argv[]) {
@@ -13,27 +13,26 @@ int main(int argc, char *argv[]) {
   std::cout << ".torrent input file is " << argv[1] << std::endl;
   std::cout << "Output folder is " << argv[2] << std::endl;
 
-  // testing BEnconding
+  // testing MetaInfo
   int64_t other;
 
   try {
-    std::istringstream stream1("i1203e");
-    other = std::get<int64_t>(decodeObject(stream1).inner);
-    std::cout << other << std::endl;
+    auto stream = std::ifstream(argv[1], std::ios::binary);
+    auto metaInfo = MetaInfo::FromStream(stream);
+    auto fileInfo = metaInfo.files[0];
 
-    std::istringstream stream("i0monkeys");
-    other = std::get<int64_t>(decodeObject(stream).inner);
+    std::cout << "name         " << metaInfo.name << std::endl;
+    std::cout << "announce     " << metaInfo.announce << std::endl;
+    std::cout << "pieceLength  " << metaInfo.pieceLength << std::endl;
+    std::cout << "comment      " << metaInfo.comment << std::endl;
+    std::cout << "createdBy    " << metaInfo.createdBy << std::endl;
+    std::cout << "creationDate " << metaInfo.creationDate << std::endl;
+    std::cout << "fileLength   " << fileInfo.length << std::endl;
+
   } catch (std::runtime_error msg) {
     std::cout << msg.what() << std::endl;
     exit(1);
   }
-
-  /*for (auto obj : other) {*/
-  /*  std::cout << obj.first << std::get<std::string>(obj.second.inner) << '
-   * ';*/
-  /*}*/
-
-  std::cout << std::endl;
 
   return 0;
 }
