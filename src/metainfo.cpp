@@ -91,6 +91,7 @@ MetaInfo MetaInfo::New(BDict &dict) {
   MetaInfo metaInfo{};
 
   if (infoDict.map.contains("files")) { // multi file mode
+    metaInfo.singleFile = false;
     auto &filesList = std::get<std::vector<BObj>>(infoDict.map["files"].inner);
 
     for (auto &fileObj : filesList) {
@@ -109,6 +110,7 @@ MetaInfo MetaInfo::New(BDict &dict) {
     }
     metaInfo.pieces = "j";
   } else { // single file mode
+    metaInfo.singleFile = true;
     metaInfo.files.push_back(
         FileInfo(std::get<int64_t>(infoDict.map["length"].inner), ""));
   }

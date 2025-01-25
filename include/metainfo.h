@@ -96,6 +96,7 @@ class MetaInfo {
 public:
   std::string name;
   std::string announce;
+  bool singleFile;
 
   // optional elements
   std::vector<std::string> announceList;
