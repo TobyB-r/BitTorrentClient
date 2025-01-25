@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
   try {
     auto stream = std::ifstream(argv[1], std::ios::binary);
     auto metaInfo = MetaInfo::FromStream(stream);
-    auto fileInfo = metaInfo.files[0];
+    auto &fileInfo = metaInfo.files[0];
 
     std::cout << "name         " << metaInfo.name << std::endl;
     std::cout << "announce     " << metaInfo.announce << std::endl;
@@ -27,7 +27,12 @@ int main(int argc, char *argv[]) {
     std::cout << "comment      " << metaInfo.comment << std::endl;
     std::cout << "createdBy    " << metaInfo.createdBy << std::endl;
     std::cout << "creationDate " << metaInfo.creationDate << std::endl;
-    std::cout << "fileLength   " << fileInfo.length << std::endl;
+
+    for (auto &file : metaInfo.files) {
+      std::cout << "FILE" << std::endl;
+      std::cout << file.path << std::endl;
+      std::cout << file.length << std::endl;
+    }
 
   } catch (std::runtime_error msg) {
     std::cout << msg.what() << std::endl;

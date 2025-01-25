@@ -2,7 +2,9 @@
 #include "bdecoder.h"
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 #include <variant>
+#include <vector>
 
 /* the metainfo is the bencoded information in the .torrent file
  Text from
@@ -85,18 +87,25 @@ files: a list of dictionaries, one for each file. Each dictionary in this list
 MetaInfo MetaInfo::New(BDict &dict) {
   std::unordered_map<std::string, BObj> &map = dict.map;
 
-  BDict infoDict = std::get<BDict>(dict.map["info"].inner);
+  BDict &infoDict = std::get<BDict>(dict.map["info"].inner);
   MetaInfo metaInfo{};
 
   if (infoDict.map.contains("files")) { // multi file mode
-    BDict filesDict = std::get<BDict>(infoDict.map["files"].inner);
+    auto &filesList = std::get<std::vector<BObj>>(infoDict.map["files"].inner);
 
-    for (auto &key : filesDict.keys) {
-      BDict fileDict = std::get<BDict>(filesDict.map[key].inner);
+    for (auto &fileObj : filesList) {
+      auto &fileDict = std::get<BDict>(fileObj.inner);
+
+      std::string s;
+
+      auto vec = std::get<std::vector<BObj>>(fileDict.map["path"].inner);
+
+      for (auto &x : vec) {
+        s += std::get<std::string>(x.inner);
+      }
 
       metaInfo.files.push_back(
-          FileInfo(std::get<int64_t>(fileDict.map["length"].inner),
-                   std::get<std::string>(fileDict.map["path"].inner)));
+          FileInfo(std::get<int64_t>(fileDict.map["length"].inner), s));
     }
     metaInfo.pieces = "j";
   } else { // single file mode
@@ -110,9 +119,15 @@ MetaInfo MetaInfo::New(BDict &dict) {
   metaInfo.pieces = std::get<std::string>(infoDict.map["pieces"].inner);
   metaInfo.pieceLength = std::get<int64_t>(infoDict.map["piece length"].inner);
 
-  metaInfo.comment = std::get<std::string>(dict.map["comment"].inner);
-  metaInfo.createdBy = std::get<std::string>(dict.map["created by"].inner);
-  metaInfo.creationDate = std::get<int64_t>(dict.map["creation date"].inner);
+  // optional entries
+  if (infoDict.map.contains("comment"))
+    metaInfo.comment = std::get<std::string>(dict.map["comment"].inner);
+
+  if (infoDict.map.contains("created by"))
+    metaInfo.createdBy = std::get<std::string>(dict.map["created by"].inner);
+
+  if (infoDict.map.contains("creation date"))
+    metaInfo.creationDate = std::get<int64_t>(dict.map["creation date"].inner);
 
   return metaInfo;
 }
@@ -124,7 +139,7 @@ MetaInfo MetaInfo::FromStream(std::istream &in) {
     throw std::runtime_error("MetaInfo is not formatted as a dictionary");
   }
 
-  BDict dict = std::get<BDict>(obj.inner);
+  BDict &dict = std::get<BDict>(obj.inner);
 
   return MetaInfo::New(dict);
 }
