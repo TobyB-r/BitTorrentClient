@@ -108,7 +108,6 @@ MetaInfo MetaInfo::New(BDict &dict) {
       metaInfo.files.push_back(
           FileInfo(std::get<int64_t>(fileDict.map["length"].inner), s));
     }
-    metaInfo.pieces = "j";
   } else { // single file mode
     metaInfo.singleFile = true;
     metaInfo.files.push_back(
@@ -122,13 +121,13 @@ MetaInfo MetaInfo::New(BDict &dict) {
   metaInfo.pieceLength = std::get<int64_t>(infoDict.map["piece length"].inner);
 
   // optional entries
-  if (infoDict.map.contains("comment"))
+  if (dict.map.contains("comment"))
     metaInfo.comment = std::get<std::string>(dict.map["comment"].inner);
 
-  if (infoDict.map.contains("created by"))
+  if (dict.map.contains("created by"))
     metaInfo.createdBy = std::get<std::string>(dict.map["created by"].inner);
 
-  if (infoDict.map.contains("creation date"))
+  if (dict.map.contains("creation date"))
     metaInfo.creationDate = std::get<int64_t>(dict.map["creation date"].inner);
 
   return metaInfo;
