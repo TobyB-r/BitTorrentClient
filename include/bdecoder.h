@@ -74,6 +74,10 @@ struct BDict {
 
 struct BObj {
   std::variant<int64_t, std::string, std::vector<BObj>, BDict> inner;
+  // start position of object in the string stream and its length
+  // here we need to be able to recover the string for the info dictionary
+  int pos;
+  int length;
 
   static BObj fromInt(int64_t a);
   static BObj fromString(std::string a);
@@ -97,3 +101,5 @@ class BEncodingException : public std::runtime_error {
 public:
   const char *what() const noexcept override { return msg.c_str(); }
 };
+
+std::string encodeObject(BObj &ojb);

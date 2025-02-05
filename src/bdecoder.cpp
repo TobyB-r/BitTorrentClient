@@ -86,27 +86,33 @@ BObj BObj::fromVec(std::vector<BObj> a) {
 
 BObj decodeObject(std::istream &stream) {
   char inp = stream.peek();
+  int start = stream.tellg();
 
   BObj obj;
 
   if (inp == 'i') {
     stream.get();
-    return BObj::fromInt(decodeInt(stream, 'e'));
+    obj = BObj::fromInt(decodeInt(stream, 'e'));
   } else if (inp == 'd') {
     stream.get();
-    return BObj::fromDict(decodeDict(stream));
+    obj = BObj::fromDict(decodeDict(stream));
   } else if (inp == 'l') {
     stream.get();
-    return BObj::fromVec(decodeList(stream));
+    obj = BObj::fromVec(decodeList(stream));
   } else if (std::isalnum(inp)) {
-    return BObj::fromString(decodeString(stream));
+    obj = BObj::fromString(decodeString(stream));
+  } else {
+    // we weren't able to identify a bencoded object
+    throw std::runtime_error(std::format(
+        "Error parsing BEncoding object at position {} char {}", start, inp));
   }
 
-  // we weren't able to identify the beginning of any bencoded section
-  int pos = stream.tellg();
-  throw std::runtime_error(std::format(
-      "Error parsing BEncoding object at position {} char {}", pos, inp));
-};
+  int end = stream.tellg();
+  obj.pos = start;
+  obj.length = end - start;
+
+  return obj;
+}
 
 BDict decodeDict(std::istream &stream) {
   std::unordered_map<std::string, BObj> map;
@@ -149,11 +155,11 @@ int64_t decodeInt(std::istream &stream, char end) {
   }
 
   return i;
-};
+}
 
 std::string decodeString(std::istream &stream) {
   int length = decodeInt(stream, ':');
   std::string str(length, '\0');
   stream.read(&str[0], length);
   return str;
-};
+}
