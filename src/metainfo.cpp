@@ -142,7 +142,14 @@ MetaInfo MetaInfo::FromStream(std::istream &in) {
 
   BDict &dict = std::get<BDict>(obj.inner);
 
-  return MetaInfo::New(dict);
+  auto metainfo =  MetaInfo::New(dict);
+
+  in.seekg(dict.map["info"].pos);
+  
+  metainfo.infoString = std::string(dict.map["info"].length, '\0');
+  in.read(&metainfo.infoString[0], dict.map["info"].length);
+  
+  return metainfo;
 }
 
 FileInfo::FileInfo(int64_t length, std::string path)

@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <ctime>
 #include <string>
-#include <variant>
 #include <vector>
 
 /* the metainfo is the bencoded information in the .torrent file
@@ -109,6 +108,7 @@ public:
   int64_t pieceLength;
   std::string pieces; // could be array of binary hashes
   bool isprivate;     // optional
+  std::string infoString;
 
   std::vector<FileInfo> files;
 
