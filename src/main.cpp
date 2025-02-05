@@ -14,13 +14,11 @@ int main(int argc, char *argv[]) {
   std::cout << "Output folder is " << argv[2] << std::endl;
 
   // testing MetaInfo
-  int64_t other;
 
   try {
     auto stream = std::ifstream(argv[1], std::ios::binary);
     auto metaInfo = MetaInfo::FromStream(stream);
     auto &fileInfo = metaInfo.files[0];
-
     std::cout << "name         " << metaInfo.name << std::endl;
     std::cout << "announce     " << metaInfo.announce << std::endl;
     std::cout << "pieceLength  " << metaInfo.pieceLength << std::endl;
@@ -30,13 +28,16 @@ int main(int argc, char *argv[]) {
 
     for (auto &file : metaInfo.files) {
       std::cout << "FILE" << std::endl;
-      std::cout << file.path << std::endl;
-      std::cout << file.length << std::endl;
+      std::cout << "path         " << file.path << std::endl;
+      std::cout << "length       " << file.length << std::endl;
     }
 
+    std::cout << "INFO" << std::endl;
+    std::cout << metaInfo.infoString;
+
   } catch (std::runtime_error msg) {
-    std::cout << msg.what() << std::endl;
-    exit(1);
+    std::cerr << msg.what() << std::endl;
+    exit(EXIT_FAILURE);
   }
 
   return 0;
