@@ -9,7 +9,7 @@
 #include <vector>
 
 // BEncoding is the format used to encode information in the .torrent files
-// Text from https://wiki.theory.org/BitTorrentSpecification#Bencoding
+// see https://wiki.theory.org/BitTorrentSpecification#Bencoding
 
 BObj BObj::fromInt(int64_t a) {
   return BObj{
