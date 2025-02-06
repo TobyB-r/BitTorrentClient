@@ -1,5 +1,6 @@
 #include "metainfo.h"
 #include "bdecoder.h"
+#include "globals.h"
 #include <cstdint>
 #include <cstring>
 #include <curl/curl.h>
@@ -89,19 +90,7 @@ MetaInfo MetaInfo::FromStream(std::istream &in) {
   in.read(&infoString[0], dict.map["info"].length);
 
   // hashing info dictionary
-  EVP_MD_CTX *context = nullptr;
-  EVP_MD *sha1 = nullptr;
-  int ret = 1;
-
-  context = EVP_MD_CTX_new();
-
-  if (context == nullptr)
-    goto err;
-
-  sha1 = EVP_MD_fetch(NULL, "sha1", NULL);
-
-  if (sha1 == nullptr)
-    goto err;
+  int fail = 1;
 
   if (!EVP_DigestInit_ex(context, sha1, NULL))
     goto err;
@@ -114,13 +103,10 @@ MetaInfo MetaInfo::FromStream(std::istream &in) {
   if (!EVP_DigestFinal_ex(context, metainfo.infoHash.data(), &len))
     goto err;
 
-  ret = 0;
+  fail = 0;
 
 err:
-  EVP_MD_free(sha1);
-  EVP_MD_CTX_free(context);
-
-  if (ret) {
+  if (fail) {
     std::cerr << "Error hashing info dictionary" << std::endl;
     ERR_print_errors_fp(stderr);
     exit(1);
@@ -148,7 +134,6 @@ std::string announce(MetaInfo &info) {
   std::string data;
   std::string url = info.announce;
 
-  // curl_easy_escape
   url += "?info_hash=";
   url += "&param2=";
 

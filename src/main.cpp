@@ -1,10 +1,17 @@
 #include "metainfo.h"
+#include "globals.h"
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <iomanip>
+
+EVP_MD_CTX *context;
+EVP_MD *sha1;
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {
@@ -14,6 +21,23 @@ int main(int argc, char *argv[]) {
 
   std::cout << ".torrent input file is " << argv[1] << std::endl;
   std::cout << "Output folder is " << argv[2] << std::endl;
+
+  // setting up openssl
+  context = EVP_MD_CTX_new();
+
+  if (context == nullptr) {
+    std::cerr << "Failed to initialize OpenSSL context" << std::endl;
+    ERR_print_errors_fp(stderr);
+    exit(1);
+  }
+
+  sha1 = EVP_MD_fetch(NULL, "sha1", NULL);
+
+  if (sha1 == nullptr) {
+    std::cerr << "Failed to fetch SHA-1 algorithm" << std::endl;
+    ERR_print_errors_fp(stderr);
+    exit(1);
+  }
 
   // testing MetaInfo
 
@@ -61,6 +85,8 @@ int main(int argc, char *argv[]) {
     std::cerr << msg.what() << std::endl;
     exit(EXIT_FAILURE);
   }
+
+  
 
   return 0;
 }
