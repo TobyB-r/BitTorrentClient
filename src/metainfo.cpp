@@ -1,6 +1,11 @@
 #include "metainfo.h"
 #include "bdecoder.h"
 #include <cstdint>
+#include <cstring>
+#include <curl/curl.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
 #include <stdexcept>
 #include <string>
 #include <variant>
@@ -42,7 +47,16 @@ MetaInfo MetaInfo::New(BDict &dict) {
   metaInfo.name = std::get<std::string>(infoDict.map["name"].inner);
   metaInfo.announce = std::get<std::string>(dict.map["announce"].inner);
 
-  metaInfo.pieces = std::get<std::string>(infoDict.map["pieces"].inner);
+  auto pieceStr = std::get<std::string>(infoDict.map["pieces"].inner);
+
+  for (int i = 0; i < pieceStr.length(); i += 20) {
+    sha1_hash_t hash;
+
+    std::copy(pieceStr.begin() + i, pieceStr.begin() + i + 20, hash.begin());
+    
+    metaInfo.pieces.push_back(hash);
+  }
+
   metaInfo.pieceLength = std::get<int64_t>(infoDict.map["piece length"].inner);
 
   // optional entries
@@ -67,15 +81,99 @@ MetaInfo MetaInfo::FromStream(std::istream &in) {
 
   BDict &dict = std::get<BDict>(obj.inner);
 
-  auto metainfo =  MetaInfo::New(dict);
+  auto metainfo = MetaInfo::New(dict);
 
   in.seekg(dict.map["info"].pos);
-  
-  metainfo.infoString = std::string(dict.map["info"].length, '\0');
-  in.read(&metainfo.infoString[0], dict.map["info"].length);
-  
+
+  auto infoString = std::string(dict.map["info"].length, '\0');
+  in.read(&infoString[0], dict.map["info"].length);
+
+  // hashing info dictionary
+  EVP_MD_CTX *context = nullptr;
+  EVP_MD *sha1 = nullptr;
+  int ret = 1;
+
+  context = EVP_MD_CTX_new();
+
+  if (context == nullptr)
+    goto err;
+
+  sha1 = EVP_MD_fetch(NULL, "sha1", NULL);
+
+  if (sha1 == nullptr)
+    goto err;
+
+  if (!EVP_DigestInit_ex(context, sha1, NULL))
+    goto err;
+
+  if (!EVP_DigestUpdate(context, infoString.data(), infoString.length()))
+    goto err;
+
+  unsigned int len;
+
+  if (!EVP_DigestFinal_ex(context, metainfo.infoHash.data(), &len))
+    goto err;
+
+  ret = 0;
+
+err:
+  EVP_MD_free(sha1);
+  EVP_MD_CTX_free(context);
+
+  if (ret) {
+    std::cerr << "Error hashing info dictionary" << std::endl;
+    ERR_print_errors_fp(stderr);
+    exit(1);
+  }
+
   return metainfo;
 }
 
 FileInfo::FileInfo(int64_t length, std::string path)
     : length(length), path(path) {}
+
+// callback for curl to write the data it recieves
+size_t write_fun(void *ptr, size_t size, size_t nmemb, void *data) {
+  size_t realsize = size * nmemb;
+  std::string *str = (std::string *)data;
+  str->append((char *)ptr, realsize);
+  return realsize;
+}
+
+// Makes http get request to tracker to announce our joining
+// see
+// https://wiki.theory.org/BitTorrentSpecification#Tracker_HTTP.2FHTTPS_Protocol
+std::string announce(MetaInfo &info) {
+  CURL *curl = curl_easy_init();
+  std::string data;
+  std::string url = info.announce;
+
+  // curl_easy_escape
+  url += "?info_hash=";
+  url += "&param2=";
+
+  if (curl) {
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_fun);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
+
+    std::cout << "curling" << std::endl;
+
+    CURLcode res = curl_easy_perform(curl);
+
+    if (res != CURLE_OK) {
+      std::cerr << "libcurl error" << std::endl;
+      std::cerr << curl_easy_strerror(res);
+      exit(res);
+    }
+
+    std::cout << info.announce << std::endl << data << std::endl;
+
+    curl_easy_cleanup(curl);
+  } else {
+    std::cerr << "Error setting up libcurl" << std::endl;
+    exit(1);
+  }
+
+  return data;
+}

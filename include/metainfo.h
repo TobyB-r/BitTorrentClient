@@ -4,9 +4,12 @@
 #include <ctime>
 #include <string>
 #include <vector>
+#include <array>
 
 // the metainfo is the bencoded information in the .torrent file
 // see https://wiki.theory.org/BitTorrentSpecification#Metainfo_File_Structure
+
+typedef std::array<uint8_t, 20> sha1_hash_t;
 
 class FileInfo {
 public:
@@ -31,9 +34,9 @@ public:
 
   // Info dictionary elements
   int64_t pieceLength;
-  std::string pieces; // could be array of binary hashes
+  std::vector<sha1_hash_t> pieces;
   bool isprivate;     // optional
-  std::string infoString;
+  sha1_hash_t infoHash; // sha1 hash of file
 
   std::vector<FileInfo> files;
 
