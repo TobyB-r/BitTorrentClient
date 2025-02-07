@@ -9,6 +9,7 @@
 #include <openssl/evp.h>
 #include <stdexcept>
 #include <string>
+#include <unistd.h>
 #include <variant>
 #include <vector>
 
@@ -19,10 +20,10 @@ MetaInfo MetaInfo::New(BDict &dict) {
   std::unordered_map<std::string, BObj> &map = dict.map;
 
   BDict &infoDict = std::get<BDict>(dict.map["info"].inner);
-  MetaInfo metaInfo{};
+  MetaInfo metainfo{};
 
   if (infoDict.map.contains("files")) { // multi file mode
-    metaInfo.singleFile = false;
+    metainfo.singleFile = false;
     auto &filesList = std::get<std::vector<BObj>>(infoDict.map["files"].inner);
 
     for (auto &fileObj : filesList) {
@@ -33,20 +34,24 @@ MetaInfo MetaInfo::New(BDict &dict) {
       auto vec = std::get<std::vector<BObj>>(fileDict.map["path"].inner);
 
       for (auto &x : vec) {
-        s += std::get<std::string>(x.inner);
+        s += "/" + std::get<std::string>(x.inner);
       }
 
-      metaInfo.files.push_back(
-          FileInfo(std::get<int64_t>(fileDict.map["length"].inner), s));
+      size_t file_length = std::get<int64_t>(fileDict.map["length"].inner);
+      metainfo.files.push_back(FileInfo(file_length, s));
+      metainfo.length += file_length;
     }
   } else { // single file mode
-    metaInfo.singleFile = true;
-    metaInfo.files.push_back(
-        FileInfo(std::get<int64_t>(infoDict.map["length"].inner), ""));
+    metainfo.singleFile = true;
+
+    size_t file_length = std::get<int64_t>(infoDict.map["length"].inner);
+    metainfo.files.push_back(FileInfo(file_length, ""));
+
+    metainfo.length = metainfo.files[0].length;
   }
 
-  metaInfo.name = std::get<std::string>(infoDict.map["name"].inner);
-  metaInfo.announce = std::get<std::string>(dict.map["announce"].inner);
+  metainfo.name = std::get<std::string>(infoDict.map["name"].inner);
+  metainfo.announce_url = std::get<std::string>(dict.map["announce"].inner);
 
   auto pieceStr = std::get<std::string>(infoDict.map["pieces"].inner);
 
@@ -54,23 +59,23 @@ MetaInfo MetaInfo::New(BDict &dict) {
     sha1_hash_t hash;
 
     std::copy(pieceStr.begin() + i, pieceStr.begin() + i + 20, hash.begin());
-    
-    metaInfo.pieces.push_back(hash);
+
+    metainfo.pieces.push_back(hash);
   }
 
-  metaInfo.pieceLength = std::get<int64_t>(infoDict.map["piece length"].inner);
+  metainfo.pieceLength = std::get<int64_t>(infoDict.map["piece length"].inner);
 
   // optional entries
   if (dict.map.contains("comment"))
-    metaInfo.comment = std::get<std::string>(dict.map["comment"].inner);
+    metainfo.comment = std::get<std::string>(dict.map["comment"].inner);
 
   if (dict.map.contains("created by"))
-    metaInfo.createdBy = std::get<std::string>(dict.map["created by"].inner);
+    metainfo.createdBy = std::get<std::string>(dict.map["created by"].inner);
 
   if (dict.map.contains("creation date"))
-    metaInfo.creationDate = std::get<int64_t>(dict.map["creation date"].inner);
+    metainfo.creationDate = std::get<int64_t>(dict.map["creation date"].inner);
 
-  return metaInfo;
+  return metainfo;
 }
 
 MetaInfo MetaInfo::FromStream(std::istream &in) {
@@ -115,7 +120,7 @@ err:
   return metainfo;
 }
 
-FileInfo::FileInfo(int64_t length, std::string path)
+FileInfo::FileInfo(size_t length, std::string path)
     : length(length), path(path) {}
 
 // callback for curl to write the data it recieves
@@ -132,17 +137,26 @@ size_t write_fun(void *ptr, size_t size, size_t nmemb, void *data) {
 std::string announce(MetaInfo &info) {
   CURL *curl = curl_easy_init();
   std::string data;
-  std::string url = info.announce;
+  std::string url = info.announce_url;
 
   url += "?info_hash=";
-  url += "&param2=";
+  url += curl_easy_escape(curl, (char *)info.infoHash.data(), 20);
+  url += "&peer_id=";
+  url += curl_easy_escape(curl, peer_id, 20);
+  url += "&port=2000";
+  url += "&uploaded=0";
+  url += "&downloaded=0";
+  url += "&left=" + std::to_string(info.length);
+  url += "&compact=1";
+  url += "&no_peer_id=0";
+  url += "&event=started";
+
+  std::cout << url << std::endl;
 
   if (curl) {
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_fun);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
-
-    std::cout << "curling" << std::endl;
 
     CURLcode res = curl_easy_perform(curl);
 
@@ -151,8 +165,6 @@ std::string announce(MetaInfo &info) {
       std::cerr << curl_easy_strerror(res);
       exit(res);
     }
-
-    std::cout << info.announce << std::endl << data << std::endl;
 
     curl_easy_cleanup(curl);
   } else {

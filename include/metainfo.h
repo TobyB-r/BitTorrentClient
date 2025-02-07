@@ -13,16 +13,16 @@ typedef std::array<uint8_t, 20> sha1_hash_t;
 
 class FileInfo {
 public:
-  int64_t length;
+  size_t length;
   std::string path;
 
-  FileInfo(int64_t length, std::string path);
+  FileInfo(size_t length, std::string path);
 };
 
 class MetaInfo {
 public:
   std::string name;
-  std::string announce;
+  std::string announce_url;
   bool singleFile;
 
   // optional elements
@@ -37,6 +37,7 @@ public:
   std::vector<sha1_hash_t> pieces;
   bool isprivate;     // optional
   sha1_hash_t infoHash; // sha1 hash of file
+  size_t length;
 
   std::vector<FileInfo> files;
 

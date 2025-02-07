@@ -1,3 +1,4 @@
+#include "globals.h"
 #include "metainfo.h"
 #include "globals.h"
 #include <openssl/bio.h>
@@ -6,14 +7,25 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
-#include <iostream>
-#include <stdexcept>
 #include <iomanip>
+#include <iostream>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <stdexcept>
+#include <unistd.h>
+
+EVP_MD_CTX *context;
+EVP_MD *sha1;
+char peer_id[21] = "_____________biorren";
 
 EVP_MD_CTX *context;
 EVP_MD *sha1;
 
 int main(int argc, char *argv[]) {
+  std::string id = std::to_string(getpid());
+  memcpy(&peer_id[0], id.data(), id.length());
+
   if (argc < 3) {
     std::cout << "Missing .torrent file and output folder" << std::endl;
     exit(1);
@@ -47,7 +59,7 @@ int main(int argc, char *argv[]) {
 
     auto &fileInfo = metainfo.files[0];
     std::cout << "name         " << metainfo.name << std::endl;
-    std::cout << "announce     " << metainfo.announce << std::endl;
+    std::cout << "announce     " << metainfo.announce_url << std::endl;
     std::cout << "pieceLength  " << metainfo.pieceLength << std::endl;
     std::cout << "comment      " << metainfo.comment << std::endl;
     std::cout << "createdBy    " << metainfo.createdBy << std::endl;
@@ -72,9 +84,8 @@ int main(int argc, char *argv[]) {
     std::cout << "INFOHASH" << std::endl;
 
     for (auto byte : metainfo.infoHash) {
-      std::cout
-          << std::hex << std::setw(2) << std::setfill('0') << (int)byte
-          << " ";
+      std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)byte
+                << " ";
     }
     std::cout << std::endl;
 
