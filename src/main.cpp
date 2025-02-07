@@ -19,9 +19,6 @@ EVP_MD_CTX *context;
 EVP_MD *sha1;
 char peer_id[21] = "_____________biorren";
 
-EVP_MD_CTX *context;
-EVP_MD *sha1;
-
 int main(int argc, char *argv[]) {
   std::string id = std::to_string(getpid());
   memcpy(&peer_id[0], id.data(), id.length());
