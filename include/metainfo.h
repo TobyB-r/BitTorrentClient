@@ -1,10 +1,10 @@
 #pragma once
 #include "bdecoder.h"
+#include <array>
 #include <cstdint>
 #include <ctime>
 #include <string>
 #include <vector>
-#include <array>
 
 // the metainfo is the bencoded information in the .torrent file
 // see https://wiki.theory.org/BitTorrentSpecification#Metainfo_File_Structure
@@ -35,7 +35,7 @@ public:
   // Info dictionary elements
   int64_t pieceLength;
   std::vector<sha1_hash_t> pieces;
-  bool isprivate;     // optional
+  bool isprivate;       // optional
   sha1_hash_t infoHash; // sha1 hash of file
   size_t length;
 
@@ -49,5 +49,4 @@ public:
 // Makes http get request to tracker to announce our joining
 // see
 // https://wiki.theory.org/BitTorrentSpecification#Tracker_HTTP.2FHTTPS_Protocol
-std::string announce(MetaInfo& info);
-
+std::string announce(MetaInfo &info);

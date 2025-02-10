@@ -1,9 +1,5 @@
 #include "globals.h"
 #include "metainfo.h"
-#include "globals.h"
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <openssl/evp.h>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -93,8 +89,6 @@ int main(int argc, char *argv[]) {
     std::cerr << msg.what() << std::endl;
     exit(EXIT_FAILURE);
   }
-
-  
 
   return 0;
 }
